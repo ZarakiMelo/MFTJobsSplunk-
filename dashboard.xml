@@ -1,0 +1,130 @@
+<form version="1.1" theme="dark">
+  <label>MFT Prod</label>
+  <description>MFT jobs execution</description>
+  <search id="base_search">
+    <query>
+      index="mft_prod" 
+      | stats values(host) as Hosts, values(Project) as Projects, values(Job) as JobsMFT, values(Item) as Items, values(State) as Status
+    </query>
+    <earliest>$time_range.earliest$</earliest>
+    <latest>$time_range.latest$</latest>
+  </search>
+  <search id="base_result">
+    <query>
+      index="mft_prod" host="$hosts$" Project="$project$" Job="$job$" Item="$item$" State="$splunkState$"
+    </query>
+    <earliest>$time_range.earliest$</earliest>
+    <latest>$time_range.latest$</latest>
+  </search>
+  <fieldset submitButton="false">
+    <input type="time" token="time_range" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="hosts" searchWhenChanged="true">
+      <label>Hosts</label>
+      <fieldForLabel>Hosts</fieldForLabel>
+      <fieldForValue>Hosts</fieldForValue>
+      <search base="base_search">
+        <query>| stats count by Hosts</query>
+      </search>
+      <default>*</default>
+      <choice value="*">All</choice>
+    </input>
+    <input type="dropdown" token="project" searchWhenChanged="true">
+      <label>Projects</label>
+      <choice value="*">All</choice>
+      <fieldForLabel>Projects</fieldForLabel>
+      <fieldForValue>Projects</fieldForValue>
+      <search base="base_search">
+        <query>| stats count by Projects</query>
+      </search>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+    <input type="dropdown" token="splunkState" searchWhenChanged="true">
+      <label>Status</label>
+      <choice value="*">All</choice>
+      <fieldForLabel>Status</fieldForLabel>
+      <fieldForValue>Status</fieldForValue>
+      <search base="base_search">
+        <query>| stats count by Status</query>
+      </search>
+      <default>*</default>
+    </input>
+    <input type="dropdown" token="job" searchWhenChanged="true">
+      <label>Jobs</label>
+      <choice value="*">All</choice>
+      <fieldForLabel>JobsMFT</fieldForLabel>
+      <fieldForValue>JobsMFT</fieldForValue>
+      <search base="base_search">
+        <query>| stats count by JobsMFT</query>
+      </search>
+      <default>*</default>
+    </input>
+    <input type="dropdown" token="item" searchWhenChanged="true">
+      <label>Items</label>
+      <choice value="*">All</choice>
+      <fieldForLabel>Items</fieldForLabel>
+      <fieldForValue>Items</fieldForValue>
+      <search base="base_search">
+        <query>| stats count by Items</query>
+      </search>
+      <default>*</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <chart>
+        <title>MFT Jobs volumetry of $project$ project(s)</title>
+        <search base="base_result">
+          <query>| stats count by Job</query>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.showDataLabels">minmax</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">minimal</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Job executions on $hosts$ host(s)</title>
+      <table>
+        <search base="base_result">
+          <query>
+            | eval mytime=strftime(_time, "%Y-%m-%d %H:%M:%S") 
+            | stats values(mytime) as Timestamp, values(host) as Hosts, values(Project) as Projects, values(Job) as Jobs, values(Item) as Items, values(State) as Status by mytime, Project, Job, Item 
+            | fields - mytime, Project, Job, Item
+          </query>
+        </search>
+        <option name="count">30</option>
+        <option name="drilldown">row</option>
+        <drilldown>
+          <link target="_blank">
+            <![CDATA[
+            jobmftdetails?form.mft_host=$row.Hosts$&form.mft_project=$row.Projects$&form.mft_job=$row.Jobs$&form.mft_item=$row.Items$&form.mft_jobduration=$row.JobsDuration$&form.mft_state=$row.Status$&time_earliest=$time_range.earliest$&time_latest=$time_range.latest$
+            ]]>
+          </link>
+        </drilldown>
+        <option name="rowNumbers">true</option>
+        <format type="color" field="Status">
+          <colorPalette type="expression">if (match (value, "^ERROR"), "#D93F3C", "0x65A637")</colorPalette>
+        </format>
+        <format type="number" field="jobDuration">
+          <option name="unit">sec</option>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>
