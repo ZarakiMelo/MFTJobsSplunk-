@@ -1,8 +1,7 @@
 <form version="1.3" theme="dark">
   <label>MFT Prod</label>
   <description>MFT execution</description>
-
-  <search id="base_search">
+ <search id="base_search">
     <query>
        index="mft_prod" "[FOR SPLUNK]"
       | rex "Project\s*=\s*(?&lt;Project&gt;[^|]+)"
@@ -34,7 +33,14 @@
       <fieldForLabel>country</fieldForLabel>
       <fieldForValue>country</fieldForValue>
       <search base="base_search">
-        <query>| stats count by country</query>
+        <query>
+          | search country="$country$" OR "$country$"="*"
+                    Project="$project$" OR "$project$"="*" 
+                    Job="$job$" OR "$job$"="*" 
+                    Item="$item$" OR "$item$"="*" 
+                    host="$hosts$" OR "$hosts$"="*"
+                    State="$splunkState$" OR "$splunkState$"="*"
+          | stats count by country</query>
       </search>
       <choice value="*">All</choice>
       <default>*</default>
@@ -47,6 +53,11 @@
       <search base="base_search">
         <query>
           | search country="$country$" OR "$country$"="*"
+                    Project="$project$" OR "$project$"="*" 
+                    Job="$job$" OR "$job$"="*" 
+                    Item="$item$" OR "$item$"="*" 
+                    host="$hosts$" OR "$hosts$"="*"
+                    State="$splunkState$" OR "$splunkState$"="*"
           | stats count by Project
         </query>
       </search>
@@ -61,7 +72,11 @@
       <search base="base_search">
         <query>
           | search country="$country$" OR "$country$"="*"
-                  Project="$project$" OR "$project$"="*"
+                    Project="$project$" OR "$project$"="*" 
+                    Job="$job$" OR "$job$"="*" 
+                    Item="$item$" OR "$item$"="*" 
+                    host="$hosts$" OR "$hosts$"="*"
+                    State="$splunkState$" OR "$splunkState$"="*"
           | stats count by Job
         </query>
       </search>
@@ -76,8 +91,11 @@
       <search base="base_search">
         <query>
           | search country="$country$" OR "$country$"="*"
-                  Project="$project$" OR "$project$"="*" 
-                  Job="$job$" OR "$job$"="*"
+                    Project="$project$" OR "$project$"="*" 
+                    Job="$job$" OR "$job$"="*" 
+                    Item="$item$" OR "$item$"="*" 
+                    host="$hosts$" OR "$hosts$"="*"
+                    State="$splunkState$" OR "$splunkState$"="*"
           | stats count by Item
         </query>
       </search>
@@ -91,10 +109,12 @@
       <fieldForValue>State</fieldForValue>
       <search base="base_search">
         <query>
-          | search country="$country$" OR "$country$"="*"
-                  Project="$project$" OR "$project$"="*" 
-                  Job="$job$" OR "$job$"="*" 
-                  Item="$item$" OR "$item$"="*" 
+           | search country="$country$" OR "$country$"="*"
+                    Project="$project$" OR "$project$"="*" 
+                    Job="$job$" OR "$job$"="*" 
+                    Item="$item$" OR "$item$"="*" 
+                    host="$hosts$" OR "$hosts$"="*"
+                    State="$splunkState$" OR "$splunkState$"="*"
           | stats count by State
         </query>
       </search>
@@ -109,9 +129,11 @@
       <search base="base_search">
         <query>
           | search country="$country$" OR "$country$"="*"
-                  Project="$project$" OR "$project$"="*" 
-                  Job="$job$" OR "$job$"="*" 
-                  Item="$item$" OR "$item$"="*" 
+                    Project="$project$" OR "$project$"="*" 
+                    Job="$job$" OR "$job$"="*" 
+                    Item="$item$" OR "$item$"="*" 
+                    host="$hosts$" OR "$hosts$"="*"
+                    State="$splunkState$" OR "$splunkState$"="*"
           | stats count by host
         </query>
       </search>
