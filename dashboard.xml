@@ -1,14 +1,20 @@
-<form version="1.2" theme="dark">
+<form version="1.3" theme="dark">
   <label>MFT Prod</label>
   <description>MFT execution</description>
 
   <search id="base_search">
     <query>
-      index="mft_prod" "[FOR SPLUNK]"
-      | eval Project=coalesce(Project, "N/A"),
-             Job=coalesce(Job, "N/A"),
-             Item=coalesce(Item, "N/A"),
-             State=coalesce(State, "N/A")
+       index="mft_prod" "[FOR SPLUNK]"
+      | rex "Project\s*=\s*(?&lt;Project&gt;[^|]+)"
+      | rex "Job\s*=\s*(?&lt;Job&gt;[^|]+)"
+      | rex "Item\s*=\s*(?&lt;Item&gt;[^|]+)"
+      | rex "State\s*=\s*(?&lt;State&gt;[^|]+)"
+      | rex field=Project "(?&lt;country&gt;^[^_]+)"
+      | eval Project=coalesce(Project,"N/A"),
+             Job=coalesce(Job,"N/A"),
+             Item=coalesce(Item,"N/A"),
+             State=if(isnull(State) OR len(State)==0, "N/A", State),
+             host=coalesce(host,"N/A")
     </query>
     <earliest>$time_range.earliest$</earliest>
     <latest>$time_range.latest$</latest>
@@ -23,14 +29,12 @@
       </default>
     </input>
 
-    <input type="dropdown" token="hosts" searchWhenChanged="true">
-      <label>Hosts</label>
-      <fieldForLabel>host</fieldForLabel>
-      <fieldForValue>host</fieldForValue>
+    <input type="dropdown" token="country" searchWhenChanged="true">
+      <label>Country</label>
+      <fieldForLabel>country</fieldForLabel>
+      <fieldForValue>country</fieldForValue>
       <search base="base_search">
-        <query>
-          | stats count by host
-        </query>
+        <query>| stats count by country</query>
       </search>
       <choice value="*">All</choice>
       <default>*</default>
@@ -42,7 +46,7 @@
       <fieldForValue>Project</fieldForValue>
       <search base="base_search">
         <query>
-          | search ($hosts$="*" OR host="$hosts$")
+          | search country="$country$" OR "$country$"="*"
           | stats count by Project
         </query>
       </search>
@@ -56,7 +60,8 @@
       <fieldForValue>Job</fieldForValue>
       <search base="base_search">
         <query>
-          | search ($hosts$="*" OR host="$hosts$") ($project$="*" OR Project="$project$")
+          | search country="$country$" OR "$country$"="*"
+                  Project="$project$" OR "$project$"="*"
           | stats count by Job
         </query>
       </search>
@@ -70,7 +75,9 @@
       <fieldForValue>Item</fieldForValue>
       <search base="base_search">
         <query>
-          | search ($hosts$="*" OR host="$hosts$") ($project$="*" OR Project="$project$") ($job$="*" OR Job="$job$")
+          | search country="$country$" OR "$country$"="*"
+                  Project="$project$" OR "$project$"="*" 
+                  Job="$job$" OR "$job$"="*"
           | stats count by Item
         </query>
       </search>
@@ -84,7 +91,10 @@
       <fieldForValue>State</fieldForValue>
       <search base="base_search">
         <query>
-          | search ($hosts$="*" OR host="$hosts$") ($project$="*" OR Project="$project$") ($job$="*" OR Job="$job$") ($item$="*" OR Item="$item$")
+          | search country="$country$" OR "$country$"="*"
+                  Project="$project$" OR "$project$"="*" 
+                  Job="$job$" OR "$job$"="*" 
+                  Item="$item$" OR "$item$"="*" 
           | stats count by State
         </query>
       </search>
@@ -92,6 +102,22 @@
       <default>*</default>
     </input>
 
+    <input type="dropdown" token="hosts" searchWhenChanged="true">
+      <label>Hosts</label>
+      <fieldForLabel>host</fieldForLabel>
+      <fieldForValue>host</fieldForValue>
+      <search base="base_search">
+        <query>
+          | search country="$country$" OR "$country$"="*"
+                  Project="$project$" OR "$project$"="*" 
+                  Job="$job$" OR "$job$"="*" 
+                  Item="$item$" OR "$item$"="*" 
+          | stats count by host
+        </query>
+      </search>
+      <choice value="*">All</choice>
+      <default>*</default>
+    </input>
   </fieldset>
 
   <row>
@@ -100,7 +126,12 @@
         <title>Volumétrie des Jobs</title>
         <search base="base_search">
           <query>
-            | search ($hosts$="*" OR host="$hosts$") ($project$="*" OR Project="$project$") ($job$="*" OR Job="$job$") ($item$="*" OR Item="$item$") ($splunkState$="*" OR State="$splunkState$")
+            | search country="$country$" OR "$country$"="*"
+                    Project="$project$" OR "$project$"="*" 
+                    Job="$job$" OR "$job$"="*" 
+                    Item="$item$" OR "$item$"="*" 
+                    host="$hosts$" OR "$hosts$"="*"
+                    State="$splunkState$" OR "$splunkState$"="*"
             | stats count by Job
           </query>
         </search>
@@ -112,20 +143,33 @@
 
   <row>
     <panel>
-      <title>Exécutions de Jobs MFT</title>
       <table>
+        <title>Exécutions Jobs Talend</title>
         <search base="base_search">
-          <query>
-            | search ($hosts$="*" OR host="$hosts$") ($project$="*" OR Project="$project$") ($job$="*" OR Job="$job$") ($item$="*" OR Item="$item$") ($splunkState$="*" OR State="$splunkState$")
-            | eval Timestamp=strftime(_time, "%Y-%m-%d %H:%M:%S")
-            | table Timestamp, host, Project, Job, Item, State
-          </query>
-        </search>
+  <query>
+    | search country="$country$" OR "$country$"="*"
+            Project="$project$" OR "$project$"="*" 
+            Job="$job$" OR "$job$"="*" 
+            Item="$item$" OR "$item$"="*" 
+            host="$hosts$" OR "$hosts$"="*"
+            State="$splunkState$" OR "$splunkState$"="*"
+    | eval Timestamp=strftime(_time, "%Y-%m-%d %H:%M:%S")
+    | eval Hosts=host, Jobs=Job, Projects=Project, Items=Item, Status=State
+    | table Timestamp, Hosts, Projects, Jobs, Items, Status
+  </query>
+</search>
         <option name="count">30</option>
         <option name="drilldown">row</option>
-        <format type="color" field="State">
-          <colorPalette type="expression">if(match(value, "^ERROR|^FAILED"), "#D93F3C", "#65A637")</colorPalette>
+        <format type="color" field="Status">
+          <colorPalette type="expression">if(match(value, "ERROR|FAILED"), "#D93F3C", "#65A637")</colorPalette>
         </format>
+       <drilldown>
+  <link target="_blank">
+    <![CDATA[
+      jobmftdetails?form.host_talend=$row.Hosts$&form.job_talend=$row.Jobs$&form.project_talend=$row.Projects$&form.item_talend=$row.Items$&form.state_talend=$row.Status$&time_earliest=$time_range.earliest$&time_latest=$time_range.latest$
+    ]]>
+  </link>
+</drilldown>
       </table>
     </panel>
   </row>

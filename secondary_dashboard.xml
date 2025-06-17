@@ -1,38 +1,68 @@
-<dashboard version="1.1" theme="dark">
+<dashboard version="1.2" theme="dark">
   <label>jobMftDetails</label>
 
   <fieldset submitButton="false">
-    <input type="hidden" token="mft_project" />
-    <input token="mft_job" />
-    <input token="mft_item" />
-    <input token="mft_state" />
-    <input token="time_range_earliest" />
-    <input token="time_range_latest" />
+    <input type="time" token="time_range" searchWhenChanged="true">
+      <label>Time Range</label>
+      <default>
+        <earliest>-4h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
   </fieldset>
-
   <row>
     <panel>
-      <title>Jobs analysis</title>
       <table>
+        <title>Jobs analysis</title>
         <search>
-          <query>
-            <![CDATA[
-index="mft_prod" earliest=$time_range_earliest$ latest=$time_range_latest$
-| eval mft_project_trim=trim("$mft_project$")
-| eval mft_job_trim=trim("$mft_job$")
-| eval mft_item_trim=trim("$mft_item$")
-| eval mft_state_trim=trim("$mft_state$")
+         <query>
+<![CDATA[
+index="mft_prod"
+| eval form_host=trim("$form.host_talend$"),
+       form_job=trim("$form.job_talend$"),
+       form_project=trim("$form.project_talend$"),
+       form_item=trim("$form.item_talend$"),
+       form_state=trim("$form.state_talend$")
+| where 
+    (host=form_host OR form_host="*" OR form_host="" OR form_host="N/A")
+ AND (Job=form_job OR form_job="*" OR form_job="" OR form_job="N/A")
+ AND (Project=form_project OR form_project="*" OR form_project="" OR form_project="N/A")
+ AND (Item=form_item OR form_item="*" OR form_item="" OR form_item="N/A")
+ AND (State=form_state OR form_state="*" OR form_state="" OR form_state="N/A")
+| eval host=if(isnull(host) OR host="", "N/A", host)
+| eval Job=if(isnull(Job) OR Job="", "N/A", Job)
+| eval Project=if(isnull(Project) OR Project="", "N/A", Project)
+| eval Item=if(isnull(Item) OR Item="", "N/A", Item)
+| eval State=if(isnull(State) OR State="", "N/A", State)
+| eval Timestamp=strftime(_time, "%Y-%m-%d %H:%M:%S")
+| table Timestamp, host, Project, Job, Item, State
+| sort - Timestamp
 
-| eval project_filter=if(mft_project_trim="*" OR mft_project_trim="N/A" OR mft_project_trim="", 1, if(Project=mft_project_trim, 1, 0))
-| eval job_filter=if(mft_job_trim="*" OR mft_job_trim="N/A" OR mft_job_trim="", 1, if(Job=mft_job_trim, 1, 0))
-| eval item_filter=if(mft_item_trim="*" OR mft_item_trim="N/A" OR mft_item_trim="", 1, if(Item=mft_item_trim, 1, 0))
-| eval state_filter=if(mft_state_trim="*" OR mft_state_trim="N/A" OR mft_state_trim="", 1, if(State=mft_state_trim, 1, 0))
 
-| where project_filter=1 AND job_filter=1 AND item_filter=1 AND state_filter=1
-| table _time, Project, Job, Item, State
-            ]]>
-          </query>
+]]>
+</query>
+
+
+          <earliest>$time_range.earliest$</earliest>
+          <latest>$time_range.latest$</latest>
         </search>
+        <option name="count">30</option>
+        <option name="drilldown">row</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">true</option>
+        <option name="totalsRow">false</option>
+        <format type="color" field="State">
+          <colorPalette type="expression">
+            if(match(value, "^ERROR|^FAILED"), "#D93F3C", "0x65A637")
+          </colorPalette>
+        </format>
+        <drilldown>
+          <link target="_blank">
+            <![CDATA[
+              search?q=index="mft_prod" Job="$row.Job$" Project="$row.Project$" Item="$row.Item$" State="$row.State$"&earliest=$time_range.earliest$&latest=$time_range.latest$
+            ]]>
+          </link>
+        </drilldown>
       </table>
     </panel>
   </row>
