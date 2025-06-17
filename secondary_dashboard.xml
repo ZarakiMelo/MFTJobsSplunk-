@@ -1,0 +1,39 @@
+<dashboard version="1.1" theme="dark">
+  <label>jobMftDetails</label>
+
+  <fieldset submitButton="false">
+    <input type="hidden" token="mft_project" />
+    <input token="mft_job" />
+    <input token="mft_item" />
+    <input token="mft_state" />
+    <input token="time_range_earliest" />
+    <input token="time_range_latest" />
+  </fieldset>
+
+  <row>
+    <panel>
+      <title>Jobs analysis</title>
+      <table>
+        <search>
+          <query>
+            <![CDATA[
+index="mft_prod" earliest=$time_range_earliest$ latest=$time_range_latest$
+| eval mft_project_trim=trim("$mft_project$")
+| eval mft_job_trim=trim("$mft_job$")
+| eval mft_item_trim=trim("$mft_item$")
+| eval mft_state_trim=trim("$mft_state$")
+
+| eval project_filter=if(mft_project_trim="*" OR mft_project_trim="N/A" OR mft_project_trim="", 1, if(Project=mft_project_trim, 1, 0))
+| eval job_filter=if(mft_job_trim="*" OR mft_job_trim="N/A" OR mft_job_trim="", 1, if(Job=mft_job_trim, 1, 0))
+| eval item_filter=if(mft_item_trim="*" OR mft_item_trim="N/A" OR mft_item_trim="", 1, if(Item=mft_item_trim, 1, 0))
+| eval state_filter=if(mft_state_trim="*" OR mft_state_trim="N/A" OR mft_state_trim="", 1, if(State=mft_state_trim, 1, 0))
+
+| where project_filter=1 AND job_filter=1 AND item_filter=1 AND state_filter=1
+| table _time, Project, Job, Item, State
+            ]]>
+          </query>
+        </search>
+      </table>
+    </panel>
+  </row>
+</dashboard>
